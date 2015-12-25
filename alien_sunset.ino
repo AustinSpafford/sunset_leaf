@@ -4,12 +4,19 @@
 #include "neopixel/neopixel.h"
 #include "SparkJson/SparkJson.h"
 
+// Disable the typical arduino Processing->C++ preprocessor.
+#pragma SPARK_NO_PREPROCESSOR
+
 // Automatically connect to the wifi router. This macro specifically defines our main().
 SYSTEM_MODE(AUTOMATIC);
+
+// ------ Constants
 
 const int k_neopixel_pin= D6;
 const int k_neopixel_count= 77;
 const int k_neopixel_protocol= WS2812B;
+
+// ------ File-scope Variables
 
 static Adafruit_NeoPixel s_neopixel_strip=
 	Adafruit_NeoPixel(
@@ -17,27 +24,18 @@ static Adafruit_NeoPixel s_neopixel_strip=
 		k_neopixel_pin, 
 		k_neopixel_protocol);
 		
-void update_status_led()
-{
-    if (Particle.connected())
-    {
-        if (RGB.controlled() == false)
-        {
-            // Since we're okay, silence the status-LED.
-            RGB.control(true);
-            RGB.brightness(0);
-        }
-    }
-    else
-    {
-        if (RGB.controlled())
-        {
-            // Release control so the connection-status will be displayed.
-            RGB.control(false);
-        }
-    }
-}
-		
+// ------ File-scope Declarations
+
+static void spark_event_handler(const char *event_name, const char *event_data);
+
+static void update_status_led();
+
+// TODO: Delete these.
+static void example_rainbow(uint8_t wait);
+static uint32_t cycle_purple_green_blue(byte WheelPos);
+
+// ------ Arduino-hooks
+
 void setup() 
 {
 	s_neopixel_strip.begin();
@@ -50,6 +48,12 @@ void setup()
     // Particle.publish("spark/device/ip");
     // Particle.publish("spark/device/name");
     // Particle.publish("spark/device/random");
+	
+	Particle.publish(
+		"current_time", // event_name
+		Time.timeStr(), // event_data
+		60, // time_to_live
+		PUBLIC);
     
 }
 
@@ -66,7 +70,9 @@ void loop()
 		PUBLIC);
 }
 
-void spark_event_handler(
+// ------ File-scope Implementations
+
+static void spark_event_handler(
     const char *event_name,
     const char *event_data)
 {
@@ -79,7 +85,29 @@ void spark_event_handler(
 		PUBLIC);
 }
 
-void example_rainbow(uint8_t wait)
+static void update_status_led()
+{
+    if (Particle.connected())
+    {
+        if (RGB.controlled() == false)
+        {
+            // Since we're okay, silence the status-LED.
+            RGB.control(true);
+            RGB.brightness(0);
+        }
+    }
+    else
+    {
+        if (RGB.controlled())
+        {
+            // Release control so the connection-status will be displayed.
+            RGB.brightness(255);
+            RGB.control(false);
+        }
+    }
+}
+
+static void example_rainbow(uint8_t wait)
 {
 	uint16_t i, j;
 
@@ -96,7 +124,7 @@ void example_rainbow(uint8_t wait)
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t example_get_hue(byte WheelPos)
+static uint32_t example_get_hue(byte WheelPos)
 {
 	if(WheelPos < 85) {
 	 return s_neopixel_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
@@ -109,7 +137,7 @@ uint32_t example_get_hue(byte WheelPos)
 	}
 }
 
-uint32_t cycle_white_green_blue(byte WheelPos)
+static uint32_t cycle_white_green_blue(byte WheelPos)
 {
 	if(WheelPos < 85) {
 		return s_neopixel_strip.Color(255 - WheelPos * 3, 255, 255 - WheelPos * 3);
@@ -122,7 +150,7 @@ uint32_t cycle_white_green_blue(byte WheelPos)
 	}
 }
 
-uint32_t cycle_purple_green_blue(byte WheelPos)
+static uint32_t cycle_purple_green_blue(byte WheelPos)
 {
 	if(WheelPos < 85) {
 		return s_neopixel_strip.Color(85 - WheelPos * 1, WheelPos * 3, 170 - WheelPos * 2);

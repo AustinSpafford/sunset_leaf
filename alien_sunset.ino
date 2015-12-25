@@ -17,6 +17,27 @@ static Adafruit_NeoPixel s_neopixel_strip=
 		k_neopixel_pin, 
 		k_neopixel_protocol);
 		
+void update_status_led()
+{
+    if (Particle.connected())
+    {
+        if (RGB.controlled() == false)
+        {
+            // Since we're okay, silence the status-LED.
+            RGB.control(true);
+            RGB.brightness(0);
+        }
+    }
+    else
+    {
+        if (RGB.controlled())
+        {
+            // Release control so the connection-status will be displayed.
+            RGB.control(false);
+        }
+    }
+}
+		
 void setup() 
 {
 	s_neopixel_strip.begin();
@@ -30,13 +51,12 @@ void setup()
     // Particle.publish("spark/device/name");
     // Particle.publish("spark/device/random");
     
-    // Silence the status-LED.
-    RGB.control(true);
-    RGB.brightness(0);
 }
 
 void loop() 
 {
+	update_status_led();
+	
 	example_rainbow(50);
 	
 	Particle.publish(

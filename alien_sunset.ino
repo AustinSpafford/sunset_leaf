@@ -16,6 +16,16 @@ const int k_neopixel_pin= D6;
 const int k_neopixel_count= 77;
 const int k_neopixel_protocol= WS2812B;
 
+const int k_sunset_duration_millis= 6000;
+
+enum e_display_mode
+{
+	_display_mode_high_noon,
+	_display_mode_sunset,
+	
+	k_display_mode_count
+};
+
 // ------ File-scope Variables
 
 static Adafruit_NeoPixel s_neopixel_strip=
@@ -23,16 +33,21 @@ static Adafruit_NeoPixel s_neopixel_strip=
 		k_neopixel_count, 
 		k_neopixel_pin, 
 		k_neopixel_protocol);
-		
+
+static e_display_mode s_display_mode= _display_mode_sunset;
+
+static long s_millis_timestamp_of_last_loop= 0;
+
+static long s_sunset_elapsed_millis= 0;
+
 // ------ File-scope Declarations
 
-static void spark_event_handler(const char *event_name, const char *event_data);
+static int handle_cycle_display_mode_command(String command_args);
 
+static uint32_t get_purple_green_blue_cycle_color(byte cyclic_index);
+
+static void update_neopixel_strip(long elapsed_millis);
 static void update_status_led();
-
-// TODO: Delete these.
-static void example_rainbow(uint8_t wait);
-static uint32_t cycle_purple_green_blue(byte WheelPos);
 
 // ------ Arduino-hooks
 
@@ -42,123 +57,107 @@ void setup()
 	
 	// Initialize the pixels to display black.
 	s_neopixel_strip.show();
-
-    // Request that the cloud report back our public-facting IP address.
-    Particle.subscribe("spark/", spark_event_handler);
-    // Particle.publish("spark/device/ip");
-    // Particle.publish("spark/device/name");
-    // Particle.publish("spark/device/random");
 	
-	Particle.publish(
-		"current_time", // event_name
-		Time.timeStr(), // event_data
-		60, // time_to_live
-		PUBLIC);
-    
+	Particle.function("cycle_mode", handle_cycle_display_mode_command);
+	
+	s_millis_timestamp_of_last_loop= millis();
 }
 
 void loop() 
 {
+	const long current_millis_timestamp= millis();
+	const long elapsed_millis= (current_millis_timestamp - s_millis_timestamp_of_last_loop);
+	
+	s_millis_timestamp_of_last_loop= current_millis_timestamp;
+	
 	update_status_led();
 	
-	example_rainbow(50);
-	
-	Particle.publish(
-		"loop_completed", // event_name
-		NULL, // event_data
-		60, // time_to_live
-		PUBLIC);
+	update_neopixel_strip(elapsed_millis);
 }
 
 // ------ File-scope Implementations
 
-static void spark_event_handler(
-    const char *event_name,
-    const char *event_data)
+static int handle_cycle_display_mode_command(String command_args)
 {
-	const String echo_message= ("received " + String(event_name) + ": " + String(event_data));
+	s_display_mode= static_cast<e_display_mode>((s_display_mode + 1) % k_display_mode_count);
 	
-	Particle.publish(
-		"echo_of_spark", // event_name
-		echo_message, // event_data
-		60, // time_to_live
-		PUBLIC);
+	return 0;
+}
+
+static uint32_t get_purple_green_blue_cycle_color(byte cyclic_index)
+{
+	if (cyclic_index < 85)
+	{
+		// Purple-to-green.
+		return s_neopixel_strip.Color(85 - cyclic_index * 1, cyclic_index * 3, 170 - cyclic_index * 2);
+	}
+	else if (cyclic_index < 170)
+	{
+		// Green-to-blue.
+		cyclic_index -= 85;
+		return s_neopixel_strip.Color(0, 255 - cyclic_index * 3, cyclic_index * 3);
+	}
+	else
+	{
+		// Blue-to-purple.
+		cyclic_index -= 170;
+		return s_neopixel_strip.Color(cyclic_index * 1, 0, 255 - cyclic_index * 1);
+	}
+}
+
+static void update_neopixel_strip(long elapsed_millis)
+{
+	switch (s_display_mode)
+	{
+	   case _display_mode_high_noon:
+			{
+				for (int pixel_index= 0; pixel_index < s_neopixel_strip.numPixels(); pixel_index++)
+				{
+					s_neopixel_strip.setPixelColor(pixel_index, s_neopixel_strip.Color(0xFF, 0xFF, 0xFF));
+				}
+			}
+			break;
+			
+		case _display_mode_sunset:
+			{
+				s_sunset_elapsed_millis= ((s_sunset_elapsed_millis + elapsed_millis) % k_sunset_duration_millis);
+				
+				const byte sunset_base_color_index= map(
+					s_sunset_elapsed_millis,
+					0, // from_min
+					(k_sunset_duration_millis - 1), // from_max
+					0, // to_min
+					0xFF); // to_max
+				
+				for (int pixel_index= 0; pixel_index < s_neopixel_strip.numPixels(); pixel_index++)
+				{
+					s_neopixel_strip.setPixelColor(pixel_index, get_purple_green_blue_cycle_color((sunset_base_color_index + pixel_index) & 0xFF));
+				}
+			}
+			break;
+	}
+	
+	s_neopixel_strip.show();
 }
 
 static void update_status_led()
 {
-    if (Particle.connected())
-    {
-        if (RGB.controlled() == false)
-        {
-            // Since we're okay, silence the status-LED.
-            RGB.control(true);
-            RGB.brightness(0);
-        }
-    }
-    else
-    {
-        if (RGB.controlled())
-        {
-            // Release control so the connection-status will be displayed.
-            RGB.brightness(255);
-            RGB.control(false);
-        }
-    }
-}
-
-static void example_rainbow(uint8_t wait)
-{
-	uint16_t i, j;
-
-	for(j=0; j<256; j++) {
-		for(i=0; i<s_neopixel_strip.numPixels(); i++) {
-			s_neopixel_strip.setPixelColor(i, cycle_purple_green_blue((i+j) & 255));
+	if (Particle.connected())
+	{
+		if (RGB.controlled() == false)
+		{
+			// Since we're doing just fine, silence the status-LED.
+			RGB.control(true);
+			RGB.brightness(0);
 		}
-		
-		s_neopixel_strip.show();
-		
-		delay(wait);
 	}
-}
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-static uint32_t example_get_hue(byte WheelPos)
-{
-	if(WheelPos < 85) {
-	 return s_neopixel_strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-	} else if(WheelPos < 170) {
-	 WheelPos -= 85;
-	 return s_neopixel_strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-	} else {
-	 WheelPos -= 170;
-	 return s_neopixel_strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-	}
-}
-
-static uint32_t cycle_white_green_blue(byte WheelPos)
-{
-	if(WheelPos < 85) {
-		return s_neopixel_strip.Color(255 - WheelPos * 3, 255, 255 - WheelPos * 3);
-	} else if(WheelPos < 170) {
-		WheelPos -= 85;
-		return s_neopixel_strip.Color(0, 255 - WheelPos * 3, WheelPos * 3);
-	} else {
-		WheelPos -= 170;
-		return s_neopixel_strip.Color(WheelPos * 3, WheelPos * 3, 255);
-	}
-}
-
-static uint32_t cycle_purple_green_blue(byte WheelPos)
-{
-	if(WheelPos < 85) {
-		return s_neopixel_strip.Color(85 - WheelPos * 1, WheelPos * 3, 170 - WheelPos * 2);
-	} else if(WheelPos < 170) {
-		WheelPos -= 85;
-		return s_neopixel_strip.Color(0, 255 - WheelPos * 3, WheelPos * 3);
-	} else {
-		WheelPos -= 170;
-		return s_neopixel_strip.Color(WheelPos * 1, 0, 255 - WheelPos * 1);
+	else
+	{
+		if (RGB.controlled())
+		{
+			// Release control so the connection-status will be displayed.
+			RGB.brightness(255);
+			RGB.control(false);
+		}
 	}
 }

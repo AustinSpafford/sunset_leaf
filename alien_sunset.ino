@@ -34,11 +34,13 @@ static Adafruit_NeoPixel s_neopixel_strip=
 		k_neopixel_pin, 
 		k_neopixel_protocol);
 
-static e_display_mode s_display_mode= _display_mode_sunset;
+static e_display_mode s_current_display_mode= _display_mode_sunset;
 
 static long s_millis_timestamp_of_last_loop= 0;
 
 static long s_sunset_elapsed_millis= 0;
+
+static int s_cloud_variable_current_display_mode= s_current_display_mode;
 
 // ------ File-scope Declarations
 
@@ -60,6 +62,8 @@ void setup()
 	
 	Particle.function("cycle_mode", handle_cycle_display_mode_command);
 	
+	Particle.variable("display_mode", s_cloud_variable_current_display_mode);
+	
 	s_millis_timestamp_of_last_loop= millis();
 }
 
@@ -79,7 +83,11 @@ void loop()
 
 static int handle_cycle_display_mode_command(String command_args)
 {
-	s_display_mode= static_cast<e_display_mode>((s_display_mode + 1) % k_display_mode_count);
+	s_current_display_mode= static_cast<e_display_mode>((s_current_display_mode + 1) % k_display_mode_count);
+	
+	s_cloud_variable_current_display_mode= s_current_display_mode;
+	
+	Particle.publish("display_mode", String(s_current_display_mode));
 	
 	return 0;
 }
@@ -107,7 +115,7 @@ static uint32_t get_purple_green_blue_cycle_color(byte cyclic_index)
 
 static void update_neopixel_strip(long elapsed_millis)
 {
-	switch (s_display_mode)
+	switch (s_current_display_mode)
 	{
 	   case _display_mode_high_noon:
 			{

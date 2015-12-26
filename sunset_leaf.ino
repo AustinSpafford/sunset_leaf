@@ -103,13 +103,13 @@ static uint32_t get_purple_green_blue_cycle_color(byte cyclic_index)
 	{
 		// Green-to-blue.
 		cyclic_index -= 85;
-		return s_neopixel_strip.Color(0, 255 - cyclic_index * 3, cyclic_index * 3);
+		return s_neopixel_strip.Color(0, 0xFF - cyclic_index * 3, cyclic_index * 3);
 	}
 	else
 	{
 		// Blue-to-purple.
 		cyclic_index -= 170;
-		return s_neopixel_strip.Color(cyclic_index * 1, 0, 255 - cyclic_index * 1);
+		return s_neopixel_strip.Color(cyclic_index * 1, 0, 0xFF - cyclic_index * 1);
 	}
 }
 
@@ -164,7 +164,7 @@ static void update_status_led()
 		if (RGB.controlled())
 		{
 			// Release control so the connection-status will be displayed.
-			RGB.brightness(255);
+			RGB.brightness(0xFF);
 			RGB.control(false);
 		}
 	}

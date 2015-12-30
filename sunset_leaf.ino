@@ -8,6 +8,10 @@
 // Automatically connect to the wifi router. This macro specifically defines our main().
 SYSTEM_MODE(AUTOMATIC);
 
+// Run the particle-system in a separate thread, specifically so
+// wifi-reconnects and the like do not interrupt/reset any animations.
+SYSTEM_THREAD(ENABLED);
+
 // ------ Constants
 
 const int k_neopixel_pin= D6;

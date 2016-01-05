@@ -45,9 +45,11 @@ static long s_sunset_elapsed_millis= 0;
 
 // ------ File-scope Declarations
 
+static uint32_t get_purple_green_blue_cycle_color(byte color_index);
+
 static int handle_cycle_display_mode_command(String command_args);
 
-static uint32_t get_purple_green_blue_cycle_color(byte color_index);
+static void handle_web_alert_event(const char *event, const char *data);
 
 static void update_neopixel_strip(long elapsed_millis);
 static void update_status_led();
@@ -62,6 +64,8 @@ void setup()
 	s_neopixel_strip.show();
 	
 	Particle.function("cycle_mode", handle_cycle_display_mode_command);
+	
+	Particle.subscribe("web_alert", handle_web_alert_event);
 	
 	Particle.variable("display_mode", s_cloud_variable_current_display_mode);
 	
@@ -82,17 +86,6 @@ void loop()
 
 // ------ File-scope Implementations
 
-static int handle_cycle_display_mode_command(String command_args)
-{
-	s_current_display_mode= static_cast<e_display_mode>((s_current_display_mode + 1) % k_display_mode_count);
-	
-	s_cloud_variable_current_display_mode= s_current_display_mode;
-	
-	Particle.publish("display_mode", String(s_current_display_mode));
-	
-	return 0;
-}
-
 static uint32_t get_purple_green_blue_cycle_color(byte color_index)
 {
 	if (color_index < 85)
@@ -112,6 +105,23 @@ static uint32_t get_purple_green_blue_cycle_color(byte color_index)
 		color_index -= 170;
 		return s_neopixel_strip.Color(color_index * 1, 0, 0xFF - color_index * 1);
 	}
+}
+
+static int handle_cycle_display_mode_command(String command_args)
+{
+	s_current_display_mode= static_cast<e_display_mode>((s_current_display_mode + 1) % k_display_mode_count);
+	
+	s_cloud_variable_current_display_mode= s_current_display_mode;
+	
+	Particle.publish("display_mode", String(s_current_display_mode));
+	
+	return 0;
+}
+
+static void handle_web_alert_event(const char *event, const char *data)
+{
+	// TODO: Replace this testing-stub.
+	handle_cycle_display_mode_command("");
 }
 
 static void update_neopixel_strip(long elapsed_millis)

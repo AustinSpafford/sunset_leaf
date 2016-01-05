@@ -1,3 +1,14 @@
+# =========================
+# Non-publishable Files
+# =========================
+
+# Nocheckin, a general purpose exclusion-token.
+*nocheckin*
+
+# =========================
+# Windows System Files
+# =========================
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
@@ -18,10 +29,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # =========================
-# Operating System Files
-# =========================
-
-# OSX
+# OSX System Files
 # =========================
 
 .DS_Store

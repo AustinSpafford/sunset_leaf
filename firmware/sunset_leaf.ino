@@ -133,7 +133,7 @@ static void update_neopixel_strip(long elapsed_millis)
 			{
 				s_neopixel_strip.setPixelColor(
 					pixel_index,
-					s_neopixel_strip.Color(0xFF, 0xFF, 0xFF));
+					s_neopixel_strip.Color(0xCC, 0xCC, 0xCC));
 			}
 		}
 		break;

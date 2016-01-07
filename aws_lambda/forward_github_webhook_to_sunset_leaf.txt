@@ -1,13 +1,18 @@
-import httplib, urllib, json
+import hashlib, hmac, httplib, json, urllib
 
-k_particle_access_token_param = 'particle_access_token'
+
+def get_required_stage_variable(event, stage_variable_name):
+
+    if not stage_variable_name in event:
+        raise Exception("The caller must specify the '" + stage_variable_name + "' parameter in the API-gateway's integration-request's mapping-templates.")
+    
+    return event[stage_variable_name]
+
 
 def webhook_handler(event, context):
     
-    if not k_particle_access_token_param in event:
-        raise Exception("The caller must specify the '" + k_particle_access_token_param + "' parameter in the API-gateway's integration-request's mapping-templates.")
-    
-    particle_access_token = event['particle_access_token']
+    github_secret = get_required_stage_variable(event, 'github_secret')
+    particle_access_token = get_required_stage_variable(event, 'particle_access_token')
     
     request_querystring = urllib.urlencode({
         'access_token': particle_access_token,

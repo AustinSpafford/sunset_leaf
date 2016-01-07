@@ -1,3 +1,10 @@
+Setting a github secret:
+
+	As seen here:
+	https://developer.github.com/webhooks/securing/
+	...generate a random secret (eg. a guid), only keeping it around for long enough to set it on both the webhook and stage-variable.
+
+
 Finding your Particle Access Token:
 
 	As seen here:
@@ -13,7 +20,8 @@ Setting up the Stage Variables:
 	http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-set-stage-variables-aws-console.html
 	...refer to step 4, adding:
 	
-	"particle_access_token"   "the_access_token_value_from_the_previous_step"
+	"github_secret", "the_same_arbitrary_value_given_to_github_when_setting_up_the_webhook"
+	"particle_access_token", "the_access_token_value_from_a_previous_step"
 	
 
 Passing the Stage Variables through to the Lambda Function:
@@ -23,6 +31,7 @@ Passing the Stage Variables through to the Lambda Function:
 	...in the "Pass stage-specific metadata to a Lambda function via a stage variable" section, we set the mapping template to:
 
 	{
+		"github_secret": "$stageVariables.github_secret",
 		"particle_access_token": "$stageVariables.particle_access_token",
 		"query_string": "$input.params().querystring"
 	}

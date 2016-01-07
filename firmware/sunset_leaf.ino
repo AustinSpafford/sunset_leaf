@@ -1,6 +1,5 @@
-// These #include statements are automatically added by the Particle IDE.
 #include "application.h"
-#include "neopixel/neopixel.h"
+#include "neopixel.h"
 
 // Disable the typical arduino Processing->C++ preprocessor.
 #pragma SPARK_NO_PREPROCESSOR
@@ -173,7 +172,7 @@ static void update_status_led()
 		{
 			// Since we're doing just fine, silence the status-LED.
 			RGB.control(true);
-			RGB.brightness(0);
+			RGB.brightness(0x00);
 		}
 	}
 	else

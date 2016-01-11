@@ -1,47 +1,86 @@
-import httplib, urllib, json
+import hashlib, hmac, httplib, json, urllib
 
-k_particle_access_token_param = 'particle_access_token'
 
-def webhook_handler(event, context):
+def get_required_parameter(
+    event, 
+    parameter_name):
+
+    if not parameter_name in event:
+        raise Exception("The caller must specify the '" + parameter_name + "' parameter in the API-gateway's integration-request's mapping-templates.")
     
-    if not k_particle_access_token_param in event:
-        raise Exception("The caller must specify the '" + k_particle_access_token_param + "' parameter in the API-gateway's integration-request's mapping-templates.")
+    return event[parameter_name]
     
-    particle_access_token = event['particle_access_token']
+
+def validate_request_signature(
+    incoming_request_signature, 
+    request_body, 
+    github_secret):
     
-    request_querystring = urllib.urlencode({
+    print '\n', "incoming_request_signature", '\n', incoming_request_signature, '\n'
+    
+    # The API gateway parsed the JSON, now we need to precisely undo it
+    github_formatted_request_body = json.dumps(obj = request_body, indent = 2)
+    
+    # print '\n', "github_formatted_request_body", '\n', github_formatted_request_body, '\n'
+   
+    expected_request_signature = "sha1=" + hmac.new(
+        key = str(github_secret), 
+        msg = str(github_formatted_request_body), 
+        digestmod = hashlib.sha1).hexdigest()
+    
+    print '\n', "expected_request_signature", '\n', expected_request_signature, '\n'
+	
+	# TODO: Call hmac.compare_digest(), and raise-exception if unequal.
+	
+    return None
+	
+
+def webhook_handler(
+	event, 
+	context):
+    
+    print '\n', "event", '\n', json.dumps(event), '\n'
+    
+    github_secret = get_required_parameter(event, 'github_secret')
+    particle_access_token = get_required_parameter(event, 'particle_access_token')
+    
+    incoming_request_body = get_required_parameter(event, 'request_body')
+    incoming_request_signature = get_required_parameter(event, 'request_signature')
+    
+    validate_request_signature(incoming_request_signature, incoming_request_body, github_secret)
+    
+    outgoing_request_querystring = urllib.urlencode({
         'access_token': particle_access_token,
         })
         
-    request_headers = {
+    outgoing_request_headers = {
         "content-type": "application/json",
         "accept": "text/plain"}
-    
-    request_body = json.dumps({
+        
+    outgoing_request_body = json.dumps({
         'name': 'web_alert',
         'data': 'github_activity',
         'private': 'false'
         })
     
-    print "request_body"
-    print request_body, '\n'
+    print '\n', "outgoing_request_body", '\n', outgoing_request_body, '\n'
     
     connection = httplib.HTTPSConnection("api.particle.io")
     
     connection.request(
         "POST",
-        "/v1/devices/events?%s" % request_querystring,
-        request_body,
-        request_headers)
+        "/v1/devices/events?%s" % outgoing_request_querystring,
+        outgoing_request_body,
+        outgoing_request_headers)
         
     response = connection.getresponse()
     
-    print "response_code"
-    print response.status, response.reason, '\n'
+    print '\n', "response_code", '\n', response.status, response.reason, '\n'
 
     response_data = response.read()
     
-    print "response_data"
-    print response_data, '\n'
+    print '\n', "response_data", '\n', response_data, '\n'
     
     connection.close()
+    
+    return None

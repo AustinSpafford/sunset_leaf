@@ -17,7 +17,6 @@ def webhook_handler(
     
     print '\n', "event", '\n', json.dumps(event), '\n'
     
-    github_secret = get_required_parameter(event, 'github_secret')
     particle_access_token = get_required_parameter(event, 'particle_access_token')
     
     incoming_request_body = get_required_parameter(event, 'request_body')

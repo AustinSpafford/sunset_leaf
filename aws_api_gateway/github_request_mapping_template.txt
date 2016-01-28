@@ -1,5 +1,4 @@
 {
-    "github_secret": $stageVariables.github_secret,
     "particle_access_token": $stageVariables.particle_access_token,
     
     "query_string": $input.params().querystring,

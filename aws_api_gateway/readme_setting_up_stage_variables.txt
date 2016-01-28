@@ -13,7 +13,7 @@ Setting up the Stage Variables:
 	http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-set-stage-variables-aws-console.html
 	...refer to step 4, adding:
 	
-	"particle_access_token"   "the_access_token_value_from_the_previous_step"
+	"particle_access_token", "<the_access_token_value_from_a_previous_step>"
 	
 
 Passing the Stage Variables through to the Lambda Function:

@@ -1,47 +1,59 @@
-import httplib, urllib, json
+import hashlib, hmac, httplib, json, urllib
 
-k_particle_access_token_param = 'particle_access_token'
 
-def webhook_handler(event, context):
+def get_required_parameter(
+    event, 
+    parameter_name):
+
+    if not parameter_name in event:
+        raise Exception("The caller must specify the '" + parameter_name + "' parameter in the API-gateway's integration-request's mapping-templates.")
     
-    if not k_particle_access_token_param in event:
-        raise Exception("The caller must specify the '" + k_particle_access_token_param + "' parameter in the API-gateway's integration-request's mapping-templates.")
+    return event[parameter_name]
+
+
+def webhook_handler(
+	event, 
+	context):
     
-    particle_access_token = event['particle_access_token']
+    print '\n', "event", '\n', json.dumps(event), '\n'
     
-    request_querystring = urllib.urlencode({
+    particle_access_token = get_required_parameter(event, 'particle_access_token')
+    
+    incoming_request_body = get_required_parameter(event, 'request_body')
+    
+    outgoing_request_querystring = urllib.urlencode({
         'access_token': particle_access_token,
         })
         
-    request_headers = {
+    outgoing_request_headers = {
         "content-type": "application/json",
-        "accept": "text/plain"}
-    
-    request_body = json.dumps({
+        "accept": "text/plain",
+		}
+        
+    outgoing_request_body = json.dumps({
         'name': 'web_alert',
         'data': 'github_activity',
-        'private': 'false'
-        })
+        'private': 'false',
+		})
     
-    print "request_body"
-    print request_body, '\n'
+    print '\n', "outgoing_request_body", '\n', outgoing_request_body, '\n'
     
     connection = httplib.HTTPSConnection("api.particle.io")
     
     connection.request(
         "POST",
-        "/v1/devices/events?%s" % request_querystring,
-        request_body,
-        request_headers)
+        "/v1/devices/events?%s" % outgoing_request_querystring,
+        outgoing_request_body,
+        outgoing_request_headers)
         
     response = connection.getresponse()
     
-    print "response_code"
-    print response.status, response.reason, '\n'
+    print '\n', "response_code", '\n', response.status, response.reason, '\n'
 
     response_data = response.read()
     
-    print "response_data"
-    print response_data, '\n'
+    print '\n', "response_data", '\n', response_data, '\n'
     
     connection.close()
+    
+    return None

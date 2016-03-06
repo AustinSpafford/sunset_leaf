@@ -1,6 +1,6 @@
 {
-    "particle_access_token": $stageVariables.particle_access_token,
+    "particle_access_token": "$stageVariables.particle_access_token",
     
     "query_string": $input.params().querystring,
-    "request_body" : $input.path('$')
+    "request_body" : "$input.path('$')"
 }
